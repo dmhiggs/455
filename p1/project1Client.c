@@ -30,24 +30,39 @@ int main(int argc, char *argv[])
 	int totalBytesRcvd; //total bytes read
 	int i, j, cmd, sends;
 
+memset(buffer, '\0', bufferSize-1);
+//strcat(buffer, "is it even writing?\n");
+//printf(buffer);
+
+	//struct command c;
+
 	//struct variable for for sockaddr_in servaddr - server address
-	SockAddr_In ServerAddress;
+	struct sockaddr_in ServerAddress;
+
+
+
+
+
+//argv[]
+for(i=0;i<argc;i++)
+{
+	printf("argv[%d]=%s\n", i, argv[i]);
+}
+
+
+
 
 	//need four or three arguments? maybe not for this program...
-	if (argc < 3 || argc > 4)
+	if (argc != 3)
 	{
 		exit(1);
 	}
 
-	if (argc == 4)
-		serverPort = atoi(argv[3]); //use given port
-	else
-		serverPort = 7; //7 is well known port for echo service
-
+	serverIP = argv[1];
+	serverport = atoi(argv[2]); //use given port
 
 	//create a socket -- create stream socket using tcp
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); //create socket point
-
 	//socket() returned bad number
 	if (sock< 0)
 	{
@@ -55,15 +70,38 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+
+
+
+
+printf("Socket made\n");
+
+
+
+
 	//server = gethostbyname(argv[1]); //?? code in tutorial, need another struct for host
 	//checking for server == NULL --> no host error if it does
 
-
 	memset(&ServerAddress, 0, sizeof(ServerAddress)); //zero out structure
 	ServerAddress.sin_family = AF_INET; //internet address family
-	ServerAddress.sin_addr.s_addr = inet_addr(serverIP); //server ip address
-	ServerAddress.sin_port = htons(serverport); //server port
 
+
+
+
+
+
+//printf("0this program exists\n");
+printf("serverport = %d\n", serverport);
+printf("serverip = %s\n", serverIP);
+
+
+
+
+	
+	ServerAddress.sin_addr.s_addr = inet_addr(serverIP); //server ip address
+//printf("1this program exists\n");
+	ServerAddress.sin_port = htons(serverport); //server port
+//printf("2this program exists\n");
 
 	//connect to server
 	if (connect(sock, (struct sockaddr*)&ServerAddress, sizeof(ServerAddress)) < 0)
@@ -73,22 +111,47 @@ int main(int argc, char *argv[])
 	} 
 
 
-	//commands
-	for (i=0;i<6;i++)
-	{
-		//put command number into message
-		strcopy(message, commands[i].cmd);
 
+
+
+
+printf("Connection made\n\n");
+
+
+
+
+//printf("3this program exists\n");
+
+	//commands
+	for (i=0;i<3;i++)
+	{
+
+printf("4this program exists -- start of for loop\n");
+		message = (char*)malloc(bufferSize+1);
+		//put command number into message
+		//strcpy(message, (char*)(i+1));
+		message[0]=(i+1);
+//printf("5this program exists\n");
+
+printf("%d\n",i);
 		//put bytes into message
 		switch (i)
 		{
 			case 0:
 			case 1:
+//printf("does strcat message commands i arg work?\n");
 				strcat(message, commands[i].arg);
+printf("yes message is %s\n", message);
 				break;
 			case 2:
+//printf("does cmd = atoi(commands[i].arg) work?\n");
+				//bytemsg = (char*)malloc(sizeof(commands[i].arg)+1);
 				cmd = atoi(commands[i].arg);
+printf("yes, it's %d but does strcat message, cmd?\n", cmd);
+
+				message = (char*)malloc(sizeof(commandNames[i])+sizeof(commands[i].arg)+1);
 				strcat(message, cmd);
+//printf("yes, it's %s\n", message);
 				break;
 			case 3:
 			case 4:
@@ -114,6 +177,8 @@ int main(int argc, char *argv[])
 				}
 				break;
 		}
+
+printf("6this program exists -- after command switch\n");
 		
 		//send and receive message
 		if (i == 4 || i == 5)
@@ -133,16 +198,16 @@ int main(int argc, char *argv[])
 				memset(bytemsg, (char)((sends%2)*1), j);
 				if (send(sock, bytemsg, j, 0)<0)
 				{
-					perror("client send byte at time failed");
+					perror("client send byte at time failed\n");
 					exit(1);
 				}
-				send++;
+				sends++;
 
 				//receive j bytes into bytesRcvd
 				bytesRcvd = recv(sock, buffer, bufferSize-1, 0);
 				if (bytesRcvd < 0)
 				{
-					perror("client receive byte at time failed");
+					perror("client receive byte at time failed\n");
 					exit(1);
 				}
 				
@@ -154,24 +219,47 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
+
+
+
+
+printf("got into the send() part, sending %s to socket %d\n", message, sock);
+
+
+
 			//send message
-			messageLen = strLen(message);
+			messageLen = strlen(message);
 			if (send(sock, message, messageLen, 0) < 0)
 			{
 				perror("client send failed");
 				exit(1);
 			}
 
+
+
+
+printf("sent it. got to the recv() part\n");
+printf("buffer before recv(): %s\n", buffer);
+
+
+
 			//receive response
+			memset(buffer, '\0', bufferSize-1);
+			
 			if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0))< 0)
 			{
-				perror("client recv() failed");
+				perror("client recv() failed\n");
 				exit(1);
 			}
+printf("bytes rcd = %d from socket %d\n", bytesRcvd, sock);
+			//bytesRcvd = recv(sock, buffer, bufferSize-1, 0);
+			//buffer[bytesRcvd] = '\0';
 		}
-
+		//printf("got to the print buffer part, but buffer is not printing\n");
 		//print response on stdout
-		printf(buffer);				
+//printf("received into the buffer: %s\n", buffer);
+		printf(buffer);
+		printf("\n\n");			
 
 	}
 
