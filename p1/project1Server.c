@@ -109,8 +109,6 @@ printf("listen finished\n");
 
 
 
-	for(;;) //run forever
-	{
 memset(&ClientAddress, 0, sizeof(ClientAddress));
 
 printf("start of loop\n");
@@ -130,6 +128,32 @@ printf("got clientLen: %d\n", ClientLen);
 			exit(1);
 		}
 
+
+
+
+	//while(1)
+	for(;;) //run forever
+	{
+/*
+memset(&ClientAddress, 0, sizeof(ClientAddress));
+
+printf("start of loop\n");
+
+		//set size of the in-out parameter
+		ClientLen = sizeof(ClientAddress);
+
+
+printf("got clientLen: %d\n", ClientLen);
+	
+
+	//accept connection from client
+		ClientSock = accept(ServerSock, (struct sockaddr *) &ClientAddress, &ClientLen);
+		if (ClientSock<0)
+		{
+			perror("accept failed");
+			exit(1);
+		}
+*/
 
 
 
@@ -156,7 +180,7 @@ printf("client accepted\n");
 
 
 printf("\nmessage received: %s\n", buffer);
-
+fflush(stdout);
 
 
 
@@ -213,7 +237,7 @@ printf("\nmessage received: %s\n", buffer);
 
 
 printf("message sent: %s\n", message);
-
+fflush(stdout);
 
 
 				break;
@@ -240,7 +264,7 @@ printf("message sent: %s\n", message);
 
 
 printf("message sent: %s\n", message);
-
+fflush(stdout);
 
 
 
@@ -263,7 +287,7 @@ printf("message sent: %s\n", message);
 				//receive j bytes at a time
 
 				//send j bytes back...?
-
+fflush(stdout);
 				break;
 
 		//never receives noMoreCommands
@@ -283,8 +307,12 @@ printf("message sent: %s\n", message);
 		//continue calling accept()
 
 
+	
+
+	//accept connection from client
 
 printf("End of Loop\n");
+fflush(stdout);
 	}
 
 
