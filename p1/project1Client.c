@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 
 
-printf("Socket made\n");
+//printf("Socket made\n");
 
 
 
@@ -79,14 +79,14 @@ printf("Socket made\n");
 
 
 
-printf("Connection made\n\n");
+//printf("Connection made\n\n");
 
 
 
 
-
+printf("\n");
 	//commands
-	for (i=0;i<4;i++)
+	for (i=0;i<7;i++)
 	{
 		//resize message to int size
 		message = (char*)malloc(bufferSize);
@@ -125,12 +125,11 @@ printf("Connection made\n\n");
 				//resize message
 				//message = (char*)malloc(bufferSize);
 
-printf("\ntesting bad int\n");
-
 				//convert Command Arg to an int
 				arg = atoi(commands[i].arg);
 
-printf("going into send\n");
+
+//printf(" \n"); //for some reason it doesn't work without this line??????????????
 
 				//send the cmd id number in string and the cmd arg number as int
 				sendstrnum(message, &buffer, sock, &bytesRcvd, arg);
@@ -149,6 +148,8 @@ printf("going into send\n");
 
 				//apply htonl() to int (host to network long)
 				arg = htonl(arg);
+
+//printf("\0"); //for some reason it doesn't work without this line??????????????
 				
 				//send and receive from servers
 				if (i==3) sendstrnum(message, &buffer, sock, &bytesRcvd, arg);
@@ -165,6 +166,18 @@ printf("going into send\n");
 				//don't send anything
 				//exit loop
 				//close socket
+/*
+				if (send(sock, 0, 0, 0)!=0)
+				{
+					perror("send 0 failed");
+					exit(1);
+				}
+*/
+shutdown(sock, SHUT_WR);
+printf("\n");
+//exit(0);
+return 0;
+/*
 				if (close(sock)<0)
 				{
 					perror("client close socket failed");
@@ -174,10 +187,16 @@ printf("going into send\n");
 				{
 					exit(0);
 				}
+*/
 				break;
 		}//end switch
 
-
+if( i!=6){
+		if (send(sock, "1", 1, 0)<0)
+		{
+			perror("send to restart loop failed");
+			exit(1);
+		}}
 
 		//print response on stdout
 		printf(buffer);
@@ -229,12 +248,7 @@ void sendstrnum(char* message, char* buffer, int sock, int *bytesRcvd, int arg)
 	char *bufpointer;
 
 	memset(buffer, '\0', bufferSize-1);
-	memset(bufpointer, '\0', bufferSize-1);
-
-
-
-printf("send message containing cmd id number\n");
-
+	//memset(bufpointer, '\0', bufferSize-1);
 
 
 	//send message containing cmd id number
@@ -246,10 +260,6 @@ printf("send message containing cmd id number\n");
 	}
 
 
-
-printf("sent it. recv()\n");
-
-
 	//receive Command name from server
 	if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0)) < 0)
 	{
@@ -258,13 +268,9 @@ printf("sent it. recv()\n");
 	}
 
 
-printf("got %s\n send %d\n", buffer, arg);
-
 	//point to where the message ended in buffer
 	bufpointer = &buffer[(int)bytesRcvd-1];
 
-
-printf("sending arg %d\n", arg);
 
 	//send integer to server
 	if (send(sock, &arg, sizeof(long), 0) < 0)
@@ -275,8 +281,6 @@ printf("sending arg %d\n", arg);
 
 
 
-printf("sent it. recv() int string\n");
-
 
 	//receive string from server into pointer into buffer where Command Name ended
 	if ((bytesRcvd = recv(sock, bufpointer, bufferSize-1, 0)) < 0)
@@ -285,8 +289,6 @@ printf("sent it. recv() int string\n");
 		exit(1);
 	}
 
-
-printf("got %s\n", bufpointer);
 }
 
 
@@ -299,10 +301,13 @@ void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg
 	int messageLen;
 	int count = 0;
 	char* bufpointer;
-	char temp[32];
-
-	memset(bufpointer, '\0', bufferSize-1);
+	char temp[bufferSize];
 	
+	int *bytes;
+
+	//memset(bufpointer, '\0', bufferSize-1);
+
+
 	//first send is message containing cmd id number
 	messageLen = strlen(message);
 	if (send(sock, message, messageLen, 0) < 0)
@@ -312,31 +317,26 @@ void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg
 	}
 
 	//receive Command Name from server
-	if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0)) < 0)
+	if ((bytesRcvd = recv(sock, buffer, bufferSize, 0)) < 0)
 	{
 		perror("receive failed");
 		exit(1);
 	}
 
+
 	//point to where the message ended in buffer
-	bufpointer = &buffer[(int)bytesRcvd-1];
+	//bufpointer = &buffer[strlen(buffer)-1];
 
 	//send integer to server
-	if (send(sock, arg, sizeof(arg), 0) < 0)
+	if (send(sock, &arg, sizeof(arg), 0) < 0)
 	{
 		perror("send failed");
 		exit(1);
 	}
 
-	//receive confirmation that server got it, but don't put it into the buffer
-	if ((bytesRcvd = recv(sock, message, messageLen, 0)) < 0 )
-	{
-		perror("receive failed");
-		exit(1);
-	}
-
 	//change size of message to j
 	message = (char*)malloc(j);
+	//bytes = (int *)malloc(j);
 
 	//change arg back to what it was...
 	arg = ntohl(arg);
@@ -345,7 +345,8 @@ void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg
 	while (arg > 0) //decrement by j?
 	{
 		//set message to all 0s or all 1s
-		memset(message, (count%2)*1, j);
+		if (count%2 == 0) memset(message, '0', j);
+		else memset(message, '1', j);
 
 		//send jblock to server
 		if (send(sock, message, j, 0) < 0)
@@ -354,12 +355,6 @@ void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg
 			exit(1);
 		}
 
-		//receive number of server receives into temp
-		if ((bytesRcvd = recv(sock, bufpointer, 31, 0)) < 0);
-		{
-			perror("client receive byte at time failed\n");
-			exit(1);
-		}
 		
 		//decrement arg
 		arg = arg - j;
@@ -370,7 +365,20 @@ void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg
 		//empty temp?
 	}
 
-	
+//bufpointer = (char*)malloc(bufferSize);
+//memset(bufpointer, '\0', bufferSize);
+
+	//receive number of server receives into temp
+	bytesRcvd = recv(sock, temp, bufferSize, 0); //if statement sends error even when it doesn't fail...?
+/*
+	if ((bytesRcvd = recv(sock, temp, bufferSize, 0)) < 0);
+	{
+		perror("client receive byte at time failed\n");
+		printf("%s\n%d\n", temp, bytesRcvd);
+		exit(1);
+	}
+*/
+strcat(buffer, temp);
 }
 
 

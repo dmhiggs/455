@@ -30,12 +30,13 @@ int main(int argc, char *argv[])
 	char *message, *bytemsg; //send this string
 	unsigned int messageLen; //length of message
 
-	int bytesRcvd;
+	int bytesRcvd=0, bytes = 0;
 	int sendnum;
 	int j, cmd, recvs;
-	int gotcmd = 0;
-
 	int opensocket = 0; //0 for closed, 1 for connected
+
+	FILE *fp;
+
 
 	//need 2 arguments
 	if (argc != 2)
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
 
 
 
-printf("Socket made\n");
+//printf("Socket made\n");
 
 
 
@@ -90,7 +91,7 @@ printf("Socket made\n");
 
 
 
-printf("binded\n");
+//printf("binded\n");
 
 
 
@@ -107,7 +108,7 @@ printf("binded\n");
 
 
 
-printf("listen finished\n");
+//printf("listen finished\n");
 
 
 
@@ -133,10 +134,11 @@ printf("listen finished\n");
 		opensocket = 1;
 
 
+	//open file
+	fp = fopen("bytes.txt", "w+");
 
 
-
-printf("client accepted\n\n");
+//printf("client accepted\n\n");
 
 
 
@@ -145,7 +147,6 @@ printf("client accepted\n\n");
 		//while client is connected
 		while (opensocket == 1)
 		{	
-printf("start of while, %s\n", buffer);
 			//receive message from client
 			if ((bytesRcvd = recv(ClientSock, buffer, bufferSize, 0))<0)
 			{
@@ -153,11 +154,12 @@ printf("start of while, %s\n", buffer);
 				exit(1);
 			}
 
+bytes += bytesRcvd;
+			fprintf(fp, buffer);
 
 
 
-
-printf("\nmessage received from client: %s\n", buffer);
+printf("message received from client: %s\n\n", buffer);
 
 
 
@@ -204,12 +206,6 @@ printf("\nmessage received from client: %s\n", buffer);
 						exit(1);
 					}
 
-
-
-
-
-printf("message sent to client: %s\n", message);
-
 					break;
 
 
@@ -223,12 +219,6 @@ printf("message sent to client: %s\n", message);
 				case 3:
 				//goodInt
 				case 4:
-
-
-
-printf("sending %s\n", message);
-
-
 					//send the Command Name
 					if (send(ClientSock, message, messageLen, 0)<0)
 					{
@@ -237,7 +227,7 @@ printf("sending %s\n", message);
 					}
 
 
-printf("sent it. recv()\n");
+printf(" \n"); //won't work without this...I don't know why...
 
 
 					//receive good or bad integer
@@ -247,14 +237,15 @@ printf("sent it. recv()\n");
 						exit(1);
 					}
 
+bytes += bytesRcvd;
+
 					//ntohl -- ushort int netlong from network byte order to host byte order
 					sendnum = ntohl(sendnum);
-printf("sendnum %d\n", sendnum);
 
 					bytemsg = &buffer[0];
 					//convert sendnum to ascii string
 					strint(sendnum, bytemsg);
-printf("after strint\n");
+
 					//send sendnum string
 					if (send(ClientSock, bytemsg, strlen(bytemsg), 0)<0)
 					{
@@ -262,7 +253,8 @@ printf("after strint\n");
 						exit(1);
 					}
 
-printf("message sent to client: %s%s\n", message, bytemsg);
+										
+					fprintf(fp, bytemsg);
 
 					break;
 
@@ -275,19 +267,71 @@ printf("message sent to client: %s%s\n", message, bytemsg);
 			
 				//byteAtATime
 				case 5:
-					j = 1; //for byte by byte
 				//kByteAtATime
 				case 6:
-					if (cmd == 6) j = 1000; //for 1k bytes by 1k bytes
 
-					recvs = 0; //number of receives so far
-					//i = bytemsg; //? idk what to do with number of bytes to send inside of bytemsg
-					bytemsg = (char*)malloc(j);
+if (cmd == 5) j = 1;
+else j = 1000;
+recvs = 0; //number of receives so far
 
-					//receive j bytes at a time
+//send command name
+if (send(ClientSock, message, messageLen, 0)<0)
+{
+	perror("send byte by byte failed");
+	exit(1);
+}
 
-					//send j bytes back...?
+//receive integer
+if ((bytesRcvd = recv(ClientSock, &sendnum, sizeof(long), 0)) < 0)
+{
+	perror("receiving byte by byte failed");
+	exit(1);
+}
 
+bytes += bytesRcvd;
+fprintf(fp, &sendnum);
+
+//ntohl -- ushort int netlong from network byte order to host byte order
+sendnum = ntohl(sendnum);
+
+//send and receive until sendnum is empty
+message = (char *)malloc(j);
+while (sendnum > 0)
+{
+//receive block of j numbers
+	if ((bytesRcvd = recv(ClientSock, message, j, 0))<0)
+	{
+		perror("recv error byte by byte");
+		exit(1);
+	}
+
+
+	//write to file
+	fprintf(fp, message);
+
+
+	//decrement sendnum by j?
+	sendnum -= j;
+
+	//increment bytesRcvd by bytesRcvd?
+	bytes += bytesRcvd;
+
+	//increment recvs by one
+	recvs++;
+}
+
+printf(" \n");
+
+//change recvs into string
+memset(buffer, '\0', bufferSize);
+strint(recvs, &buffer);
+
+//send number of recvs as string
+if (send(ClientSock, &buffer, strlen(buffer), 0)<0)
+{
+	perror("send byte byte error");
+	exit(1);
+}
 
 
 					break;
@@ -298,25 +342,55 @@ printf("message sent to client: %s%s\n", message, bytemsg);
 					break;
 			}
 		
+printf("get here?\n");
+bytesRcvd=0;
 
-			//server writes all bytes received into a file
-				//write all and only bytes server receives
-
-
+usleep(10000);
 			//server close client connection when recv = 0 bytes
 				//print on console total bytes received on current connection
+bytesRcvd = recv(ClientSock, buffer, 1,0);
+			if (bytesRcvd == 0)
+			{
+
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+			}
+			if (bytesRcvd != 1)
+			{
+/*				perror("recv to restart loop failed");
+				printf("%d", bytesRcvd);
+				exit(1);
+*/
+
+printf("get here too?\n");
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+			}
+
+printf("%d\n", bytesRcvd);
+printf("...received\n");
+
 
 			//continue calling accept()
 
 		memset(buffer, 0, bufferSize);
 		message = (char *)malloc(1);
 		bytemsg = (char *)malloc(1);
-printf("End of while\n");	
 		}
 
 	//accept connection from client
 	//the accept happens at the top of for loop
-printf("end of for\n");
+
+
+
+	//close file
+	fclose(fp);
 	}
 }
 
@@ -348,10 +422,6 @@ void strint(int num, char *str)
 	}
 
 
-
-printf("strint %d\n", num);
-
-
 	while (num >= 1)
 	{
 		remainder = num % base;
@@ -366,7 +436,6 @@ printf("strint %d\n", num);
 		}
 		else if (remainder < 10)
 		{
-printf("n[remainder] %s\n", n[remainder]);
 			strcpy(str2, n[remainder]);
 		}
 
@@ -384,10 +453,6 @@ printf("n[remainder] %s\n", n[remainder]);
 	
 	for (i; i<strlen(str1); i++)
 	{
-printf("str1[i]: %c\n", str1[i]);
 		str[strlen(str1)+neg-1-i] = str1[i];
-printf("str %s\n\n", str);
-
 	}
-printf("strint num in strint: %s\n", str);
 }
