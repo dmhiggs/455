@@ -166,37 +166,12 @@ printf("\n");
 				//don't send anything
 				//exit loop
 				//close socket
-/*
-				if (send(sock, 0, 0, 0)!=0)
-				{
-					perror("send 0 failed");
-					exit(1);
-				}
-*/
 shutdown(sock, SHUT_WR);
 printf("\n");
 //exit(0);
 return 0;
-/*
-				if (close(sock)<0)
-				{
-					perror("client close socket failed");
-					exit(1);
-				}
-				else
-				{
-					exit(0);
-				}
-*/
 				break;
 		}//end switch
-
-if( i!=6){
-		if (send(sock, "1", 1, 0)<0)
-		{
-			perror("send to restart loop failed");
-			exit(1);
-		}}
 
 		//print response on stdout
 		printf(buffer);

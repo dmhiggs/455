@@ -148,10 +148,24 @@ int main(int argc, char *argv[])
 		while (opensocket == 1)
 		{	
 			//receive message from client
-			if ((bytesRcvd = recv(ClientSock, buffer, bufferSize, 0))<0)
+			if ((bytesRcvd = recv(ClientSock, buffer, bufferSize, 0))<=0)
 			{
-				perror("recv failed");
-				exit(1);
+if (bytesRcvd == 0)
+{
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+				//close file
+				fclose(fp);
+				break;
+}
+else
+{
+		perror("recv error byte by byte");
+		exit(1);
+}
 			}
 
 bytes += bytesRcvd;
@@ -231,10 +245,24 @@ printf(" \n"); //won't work without this...I don't know why...
 
 
 					//receive good or bad integer
-					if ((bytesRcvd = recv(ClientSock, &sendnum, sizeof(long), 0)) < 0)
+					if ((bytesRcvd = recv(ClientSock, &sendnum, sizeof(long), 0)) <= 0)
 					{
-						perror("receiving bad or good int failed");
-						exit(1);
+if (bytesRcvd == 0)
+{
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+				//close file
+				fclose(fp);
+				break;
+}
+else
+{
+		perror("recv error byte by byte");
+		exit(1);
+}
 					}
 
 bytes += bytesRcvd;
@@ -282,10 +310,24 @@ if (send(ClientSock, message, messageLen, 0)<0)
 }
 
 //receive integer
-if ((bytesRcvd = recv(ClientSock, &sendnum, sizeof(long), 0)) < 0)
+if ((bytesRcvd = recv(ClientSock, &sendnum, sizeof(long), 0)) <= 0)
 {
-	perror("receiving byte by byte failed");
-	exit(1);
+if (bytesRcvd == 0)
+{
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+				//close file
+				fclose(fp);
+				break;
+}
+else
+{
+		perror("recv error byte by byte");
+		exit(1);
+}
 }
 
 bytes += bytesRcvd;
@@ -299,10 +341,24 @@ message = (char *)malloc(j);
 while (sendnum > 0)
 {
 //receive block of j numbers
-	if ((bytesRcvd = recv(ClientSock, message, j, 0))<0)
+	if ((bytesRcvd = recv(ClientSock, message, j, 0))<=0)
 	{
+		if (bytesRcvd == 0)
+{
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+				//close file
+				fclose(fp);
+				break;
+}
+else
+{
 		perror("recv error byte by byte");
 		exit(1);
+}
 	}
 
 
@@ -339,43 +395,16 @@ if (send(ClientSock, &buffer, strlen(buffer), 0)<0)
 			//never receives noMoreCommands
 				//NoMoreCommands
 				default:
+				opensocket = 0;
+				close(ClientSock);
+				printf("Total bytes received on current connection: %d\n", bytes);
+				bytesRcvd = 0;
+				bytes = 0;
+				//close file
+				fclose(fp);
 					break;
 			}
 		
-printf("get here?\n");
-bytesRcvd=0;
-
-usleep(10000);
-			//server close client connection when recv = 0 bytes
-				//print on console total bytes received on current connection
-bytesRcvd = recv(ClientSock, buffer, 1,0);
-			if (bytesRcvd == 0)
-			{
-
-				opensocket = 0;
-				close(ClientSock);
-				printf("Total bytes received on current connection: %d\n", bytes);
-				bytesRcvd = 0;
-				bytes = 0;
-			}
-			if (bytesRcvd != 1)
-			{
-/*				perror("recv to restart loop failed");
-				printf("%d", bytesRcvd);
-				exit(1);
-*/
-
-printf("get here too?\n");
-				opensocket = 0;
-				close(ClientSock);
-				printf("Total bytes received on current connection: %d\n", bytes);
-				bytesRcvd = 0;
-				bytes = 0;
-			}
-
-printf("%d\n", bytesRcvd);
-printf("...received\n");
-
 
 			//continue calling accept()
 
@@ -387,10 +416,6 @@ printf("...received\n");
 	//accept connection from client
 	//the accept happens at the top of for loop
 
-
-
-	//close file
-	fclose(fp);
 	}
 }
 
