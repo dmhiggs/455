@@ -22,51 +22,29 @@ int main(int argc, char *argv[])
 	unsigned short serverport; //server port
 	char *serverIP; //server IP address
 
-	char *message, *bytemsg; //string to send to server
+	char *message; //string to send to server
 	char buffer[bufferSize]; //buffer for message received
-	unsigned int messageLen; //length of message
 
 	int bytesRcvd; //bytes read in single recv()
-	int totalBytesRcvd; //total bytes read
-	int i, j, cmd, sends;
+	int i, cmd, arg; //int for counter, int for command id number, int for atoi(command arg)
 
-
-
-//memset(buffer, '\0', bufferSize-1);
-//strcat(buffer, "is it even writing?\n");
-//printf(buffer);
-
-
-
-	//struct command c;
 
 	//struct variable for for sockaddr_in servaddr - server address
 	struct sockaddr_in ServerAddress;
 
-
-
-
-
-//argv[]
-for(i=0;i<argc;i++)
-{
-	printf("argv[%d]=%s\n", i, argv[i]);
-}
-
-
-
-
-	//need four or three arguments? maybe not for this program...
+	//need three arguments
 	if (argc != 3)
 	{
 		exit(1);
 	}
 
-	serverIP = argv[1];
+	//argv assignments
+	serverIP = argv[1]; //set the ip
 	serverport = atoi(argv[2]); //use given port
 
 	//create a socket -- create stream socket using tcp
 	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP); //create socket point
+
 	//socket() returned bad number
 	if (sock< 0)
 	{
@@ -79,38 +57,16 @@ for(i=0;i<argc;i++)
 
 
 printf("Socket made\n");
-fflush(stdout);
 
 
 
-	//server = gethostbyname(argv[1]); //?? code in tutorial, need another struct for host
-	//checking for server == NULL --> no host error if it does
 
+
+	//set up server
 	memset(&ServerAddress, 0, sizeof(ServerAddress)); //zero out structure
 	ServerAddress.sin_family = AF_INET; //internet address family
-
-
-
-
-
-
-//printf("0this program exists\n");
-printf("serverport = %d\n", serverport);
-printf("serverip = %s\n", serverIP);
-fflush(stdout);
-
-
-
-	
 	ServerAddress.sin_addr.s_addr = inet_addr(serverIP); //server ip address
-
-//printf("1this program exists\n");
-
 	ServerAddress.sin_port = htons(serverport); //server port
-
-//printf("2this program exists\n");
-
-
 
 	//connect to server
 	if (connect(sock, (struct sockaddr*)&ServerAddress, sizeof(ServerAddress)) < 0)
@@ -123,83 +79,88 @@ fflush(stdout);
 
 
 
-
 printf("Connection made\n\n");
-fflush(stdout);
 
 
-
-//printf("3this program exists\n");
 
 
 
 	//commands
-	for (i=0;i<3;i++)
+	for (i=0;i<4;i++)
 	{
-
-
-printf("4this program exists -- start of for loop\n");
-fflush(stdout);
-
+		//resize message to int size
 		message = (char*)malloc(bufferSize);
+
+		//cmd id number
+		cmd = i + 1;
+
 		//put command number into message
-		//strcpy(message, (char*)(i+1));
-		message[0]=(i+1);
-
-
-//printf("5this program exists\n");
-
-printf("%d\n",i);
-
+		message[0]=(cmd);
 
 		//put bytes into message
 		switch (i)
 		{
+			//null terminated & given length -- sends strings (cmd and arg)
 			case 0:
+				//resize message
 				message = (char*)malloc(bufferSize+1);
+
 				//put command number into message
-				//strcpy(message, (char*)(i+1));
-				message[0]=(i+1);
+				message[0]=(cmd);
 
 			case 1:
-
-//printf("tests both null terminated and given length");
-//printf("does strcat message commands i arg work?\n");
+				//add the command arg str to the cmd number
 				strcat(message, commands[i].arg);
-				if (i==0) message[bufferSize]='\0';
+				if (i==0) message[bufferSize]='\0'; //add null terminator for case 0
 
-
-//printf("yes message is %s\n", message);
-
+				//send and receive from server
+				sendtwostr(message, &buffer, sock, &bytesRcvd);
 				break;
+
+
+
+
+			//bad int -- sends string and number (cmd and integer)
 			case 2:
+				//resize message
+				//message = (char*)malloc(bufferSize);
 
-printf("testing bad int\n");
-printf("does cmd = atoi(commands[i].arg) work?\n");
-fflush(stdout);
+printf("\ntesting bad int\n");
 
-				//bytemsg = (char*)malloc(sizeof(commands[i].arg)+1);
-				cmd = atoi(commands[i].arg);
+				//convert Command Arg to an int
+				arg = atoi(commands[i].arg);
 
-printf("yes, it's %d but does strcat message, cmd?\n", cmd);
-fflush(stdout);
+printf("going into send\n");
 
-				message = (char*)malloc(bufferSize);
-				strcat(message, (char)cmd);
-
-printf("yes, it's %s\n", message);
-fflush(stdout);
-
-				break;
-			case 3:
-			case 4:
-				j = 1;
-			case 5:
-				if (i==5) j = 1000;
-				cmd = atoi(commands[i].arg);
-				strcat(message, htonl(cmd));
+				//send the cmd id number in string and the cmd arg number as int
+				sendstrnum(message, &buffer, sock, &bytesRcvd, arg);
 				break;
 
+
+
+
+			//good int, byte at a time, kbyte at a time
+			case 3: //sends cmd and integer
+			case 4: //sends numbers in bytes
+			case 5: //sends numbers in bytes
+
+				//convert Command Arg to an int
+				arg = atoi(commands[i].arg);
+
+				//apply htonl() to int (host to network long)
+				arg = htonl(arg);
+				
+				//send and receive from servers
+				if (i==3) sendstrnum(message, &buffer, sock, &bytesRcvd, arg);
+				if (i==4) sendstrbytes(message, &buffer, sock, &bytesRcvd, arg, 1);
+				if (i==5) sendstrbytes(message, &buffer, sock, &bytesRcvd, arg, 1000);
+
+				break;
+
+
+
+
+			//treating this as the No Command command
 			default:
 				//don't send anything
 				//exit loop
@@ -214,107 +175,220 @@ fflush(stdout);
 					exit(0);
 				}
 				break;
-		}
+		}//end switch
 
 
-
-printf("6this program exists -- after command switch\n");
-fflush(stdout);		
-
-
-		//send and receive message
-		if (i == 4 || i == 5)
-		{
-			sends=0;
-			//first send is command number and number of bytes to send
-			if (send(sock, message, messageLen, 0) < 0)
-			{
-				perror("client send byte at time failed");
-				exit(1);
-			}
-
-
-fflush(stdout);
-
-			//still have bytes left to send
-			while (cmd > 0)
-			{
-				//send j bytes of alternating 0 and 1
-				memset(bytemsg, (char)((sends%2)*1), j);
-				if (send(sock, bytemsg, j, 0)<0)
-				{
-					perror("client send byte at time failed\n");
-					exit(1);
-				}
-				sends++;
-fflush(stdout);
-				//receive j bytes into bytesRcvd
-				bytesRcvd = recv(sock, buffer, bufferSize-1, 0);
-				if (bytesRcvd < 0)
-				{
-					perror("client receive byte at time failed\n");
-					exit(1);
-				}
-				
-				//decrement cmd
-				cmd = cmd - bytesRcvd;
-fflush(stdout);				
-			}
-
-		}
-		else
-		{
-
-
-
-
-printf("got into the send() part, sending %s to socket %d\n", message, sock);
-fflush(stdout);
-
-
-			//send message
-			messageLen = strlen(message);
-			if (send(sock, message, messageLen, 0) < 0)
-			{
-				perror("client send failed");
-				exit(1);
-			}
-
-
-fflush(stdout);
-printf("sent it. got to the recv() part\n");
-printf("buffer before recv(): %s\n", buffer);
-fflush(stdout);
-
-
-			//receive response
-			memset(buffer, '\0', bufferSize-1);
-			
-			if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0))< 0)
-			{
-				perror("client recv() failed\n");
-				exit(1);
-			}
-
-printf("bytes rcd = %d from socket %d\n", bytesRcvd, sock);
-fflush(stdout);
-			//bytesRcvd = recv(sock, buffer, bufferSize-1, 0);
-			//buffer[bytesRcvd] = '\0';
-		}
-
-
-//printf("got to the print buffer part, but buffer is not printing\n");
 
 		//print response on stdout
-
-//printf("received into the buffer: %s\n", buffer);
-
 		printf(buffer);
-		printf("\n\n");			
-fflush(stdout);
-memset(buffer,'\0',bufferSize);
+		printf("\n");			
+		
+		//empty buffer???	
+		memset(buffer, 0, bufferSize);
+		message = (char *)malloc(1);
+	}//end for
 
+}//end main
+
+
+
+
+
+
+//send two strings, receive 1
+void sendtwostr(char* message, char* buffer, int sock, int *bytesRcvd)
+{
+	int messageLen;
+
+	memset(buffer, '\0', bufferSize-1);
+
+	//send message
+	messageLen = strlen(message);
+	if (send(sock, message, messageLen, 0) < 0)
+	{
+		perror("client send failed");
+		exit(1);
 	}
+	
+	//receive response
+	if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0))< 0)
+	{
+		perror("client recv() failed\n");
+		exit(1);
+	}
+}
+
+
+
+
+
+//send string and number, receive two strings
+void sendstrnum(char* message, char* buffer, int sock, int *bytesRcvd, int arg)
+{
+	int messageLen;
+	char *bufpointer;
+
+	memset(buffer, '\0', bufferSize-1);
+	memset(bufpointer, '\0', bufferSize-1);
+
+
+
+printf("send message containing cmd id number\n");
+
+
+
+	//send message containing cmd id number
+	messageLen = strlen(message);
+	if (send(sock, message, messageLen, 0) < 0)
+	{
+		perror("send failed");
+		exit(1);
+	}
+
+
+
+printf("sent it. recv()\n");
+
+
+	//receive Command name from server
+	if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0)) < 0)
+	{
+		perror("receive failed");
+		exit(1);
+	}
+
+
+printf("got %s\n send %d\n", buffer, arg);
+
+	//point to where the message ended in buffer
+	bufpointer = &buffer[(int)bytesRcvd-1];
+
+
+printf("sending arg %d\n", arg);
+
+	//send integer to server
+	if (send(sock, &arg, sizeof(long), 0) < 0)
+	{
+		perror("send failed");
+		exit(1);
+	}
+
+
+
+printf("sent it. recv() int string\n");
+
+
+	//receive string from server into pointer into buffer where Command Name ended
+	if ((bytesRcvd = recv(sock, bufpointer, bufferSize-1, 0)) < 0)
+	{
+		perror("receive failed");
+		exit(1);
+	}
+
+
+printf("got %s\n", bufpointer);
+}
+
+
+
+
+
+//send string and J amount of bytes multiple times, receive string and J amount of bytes multiple times
+void sendstrbytes(char* message, char* buffer, int sock, int* bytesRcvd, int arg, int j)
+{
+	int messageLen;
+	int count = 0;
+	char* bufpointer;
+	char temp[32];
+
+	memset(bufpointer, '\0', bufferSize-1);
+	
+	//first send is message containing cmd id number
+	messageLen = strlen(message);
+	if (send(sock, message, messageLen, 0) < 0)
+	{
+		perror("client send byte at time failed");
+		exit(1);
+	}
+
+	//receive Command Name from server
+	if ((bytesRcvd = recv(sock, buffer, bufferSize-1, 0)) < 0)
+	{
+		perror("receive failed");
+		exit(1);
+	}
+
+	//point to where the message ended in buffer
+	bufpointer = &buffer[(int)bytesRcvd-1];
+
+	//send integer to server
+	if (send(sock, arg, sizeof(arg), 0) < 0)
+	{
+		perror("send failed");
+		exit(1);
+	}
+
+	//receive confirmation that server got it, but don't put it into the buffer
+	if ((bytesRcvd = recv(sock, message, messageLen, 0)) < 0 )
+	{
+		perror("receive failed");
+		exit(1);
+	}
+
+	//change size of message to j
+	message = (char*)malloc(j);
+
+	//change arg back to what it was...
+	arg = ntohl(arg);
+
+	//send and receive a bunch of blocks (alternating 0 & 1) of j size until arg is empty
+	while (arg > 0) //decrement by j?
+	{
+		//set message to all 0s or all 1s
+		memset(message, (count%2)*1, j);
+
+		//send jblock to server
+		if (send(sock, message, j, 0) < 0)
+		{
+			perror("client send byte at time failed\n");
+			exit(1);
+		}
+
+		//receive number of server receives into temp
+		if ((bytesRcvd = recv(sock, bufpointer, 31, 0)) < 0);
+		{
+			perror("client receive byte at time failed\n");
+			exit(1);
+		}
+		
+		//decrement arg
+		arg = arg - j;
+
+		//increment count
+		count++;
+
+		//empty temp?
+	}
+
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 	//read server response -- get same string back from server
@@ -336,4 +410,3 @@ memset(buffer,'\0',bufferSize);
 		printf(buffer); //print buffer
 	}
 */
-}
